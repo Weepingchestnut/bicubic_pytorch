@@ -71,3 +71,4 @@ target/
 
 # Output images
 *.png
+.idea/

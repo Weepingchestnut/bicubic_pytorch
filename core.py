@@ -26,15 +26,17 @@ import typing
 import torch
 from torch.nn import functional as F
 
-__all__ = ['imresize'] 
+__all__ = ['imresize']
 
 _I = typing.Optional[int]
 _D = typing.Optional[torch.dtype]
+
 
 def nearest_contribution(x: torch.Tensor) -> torch.Tensor:
     range_around_0 = torch.logical_and(x.gt(-0.5), x.le(0.5))
     cont = range_around_0.to(dtype=x.dtype)
     return cont
+
 
 def linear_contribution(x: torch.Tensor) -> torch.Tensor:
     ax = x.abs()
@@ -42,7 +44,8 @@ def linear_contribution(x: torch.Tensor) -> torch.Tensor:
     cont = (1 - ax) * range_01.to(dtype=x.dtype)
     return cont
 
-def cubic_contribution(x: torch.Tensor, a: float=-0.5) -> torch.Tensor:
+
+def cubic_contribution(x: torch.Tensor, a: float = -0.5) -> torch.Tensor:
     ax = x.abs()
     ax2 = ax * ax
     ax3 = ax * ax2
@@ -59,16 +62,17 @@ def cubic_contribution(x: torch.Tensor, a: float=-0.5) -> torch.Tensor:
     cont = cont_01 + cont_12
     return cont
 
-def gaussian_contribution(x: torch.Tensor, sigma: float=2.0) -> torch.Tensor:
+
+def gaussian_contribution(x: torch.Tensor, sigma: float = 2.0) -> torch.Tensor:
     range_3sigma = (x.abs() <= 3 * sigma + 1)
     # Normalization will be done after
-    cont = torch.exp(-x.pow(2) / (2 * sigma**2))
+    cont = torch.exp(-x.pow(2) / (2 * sigma ** 2))
     cont = cont * range_3sigma.to(dtype=x.dtype)
     return cont
 
-def discrete_kernel(
-        kernel: str, scale: float, antialiasing: bool=True) -> torch.Tensor:
 
+def discrete_kernel(
+        kernel: str, scale: float, antialiasing: bool = True) -> torch.Tensor:
     '''
     For downsampling with integer scale only.
     '''
@@ -97,12 +101,12 @@ def discrete_kernel(
 
     return k
 
+
 def reflect_padding(
         x: torch.Tensor,
         dim: int,
         pad_pre: int,
         pad_post: int) -> torch.Tensor:
-
     '''
     Apply reflect padding to the given Tensor.
     Note that it is slightly different from the PyTorch functional.pad,
@@ -132,13 +136,13 @@ def reflect_padding(
 
     return padding_buffer
 
+
 def padding(
         x: torch.Tensor,
         dim: int,
         pad_pre: int,
         pad_post: int,
-        padding_type: typing.Optional[str]='reflect') -> torch.Tensor:
-
+        padding_type: typing.Optional[str] = 'reflect') -> torch.Tensor:
     if padding_type is None:
         return x
     elif padding_type == 'reflect':
@@ -148,11 +152,11 @@ def padding(
 
     return x_pad
 
+
 def get_padding(
         base: torch.Tensor,
         kernel_size: int,
         x_size: int) -> typing.Tuple[int, int, torch.Tensor]:
-
     base = base.long()
     r_min = base.min()
     r_max = base.max() + kernel_size - 1
@@ -172,13 +176,13 @@ def get_padding(
 
     return pad_pre, pad_post, base
 
+
 def get_weight(
         dist: torch.Tensor,
         kernel_size: int,
-        kernel: str='cubic',
-        sigma: float=2.0,
-        antialiasing_factor: float=1) -> torch.Tensor:
-
+        kernel: str = 'cubic',
+        sigma: float = 2.0,
+        antialiasing_factor: float = 1) -> torch.Tensor:
     buffer_pos = dist.new_zeros(kernel_size, len(dist))
     for idx, buffer_sub in enumerate(buffer_pos):
         buffer_sub.copy_(dist - idx)
@@ -194,6 +198,7 @@ def get_weight(
 
     weight /= weight.sum(dim=0, keepdim=True)
     return weight
+
 
 def reshape_tensor(x: torch.Tensor, dim: int, kernel_size: int) -> torch.Tensor:
     # Resize height
@@ -211,9 +216,9 @@ def reshape_tensor(x: torch.Tensor, dim: int, kernel_size: int) -> torch.Tensor:
     unfold = unfold.view(unfold.size(0), -1, h_out, w_out)
     return unfold
 
+
 def reshape_input(
         x: torch.Tensor) -> typing.Tuple[torch.Tensor, _I, _I, _I, _I]:
-
     if x.dim() == 4:
         b, c, h, w = x.size()
     elif x.dim() == 3:
@@ -228,21 +233,22 @@ def reshape_input(
     x = x.view(-1, 1, h, w)
     return x, b, c, h, w
 
+
 def reshape_output(
         x: torch.Tensor, b: _I, c: _I) -> torch.Tensor:
-
     rh = x.size(-2)
     rw = x.size(-1)
     # Back to the original dimension
     if b is not None:
-        x = x.view(b, c, rh, rw)        # 4-dim
+        x = x.view(b, c, rh, rw)  # 4-dim
     else:
         if c is not None:
-            x = x.view(c, rh, rw)       # 3-dim
+            x = x.view(c, rh, rw)  # 3-dim
         else:
-            x = x.view(rh, rw)          # 2-dim
+            x = x.view(rh, rw)  # 2-dim
 
     return x
+
 
 def cast_input(x: torch.Tensor) -> typing.Tuple[torch.Tensor, _D]:
     if x.dtype != torch.float32 or x.dtype != torch.float64:
@@ -252,6 +258,7 @@ def cast_input(x: torch.Tensor) -> typing.Tuple[torch.Tensor, _D]:
         dtype = None
 
     return x, dtype
+
 
 def cast_output(x: torch.Tensor, dtype: _D) -> torch.Tensor:
     if dtype is not None:
@@ -265,16 +272,16 @@ def cast_output(x: torch.Tensor, dtype: _D) -> torch.Tensor:
 
     return x
 
+
 def resize_1d(
         x: torch.Tensor,
         dim: int,
         size: typing.Optional[int],
         scale: typing.Optional[float],
-        kernel: str='cubic',
-        sigma: float=2.0,
-        padding_type: str='reflect',
-        antialiasing: bool=True) -> torch.Tensor:
-
+        kernel: str = 'cubic',
+        sigma: float = 2.0,
+        padding_type: str = 'reflect',
+        antialiasing: bool = True) -> torch.Tensor:
     '''
     Args:
         x (torch.Tensor): A torch.Tensor of dimension (B x C, 1, H, W).
@@ -337,12 +344,12 @@ def resize_1d(
     x = x.sum(dim=1, keepdim=True)
     return x
 
+
 def downsampling_2d(
         x: torch.Tensor,
         k: torch.Tensor,
         scale: int,
-        padding_type: str='reflect') -> torch.Tensor:
-
+        padding_type: str = 'reflect') -> torch.Tensor:
     c = x.size(1)
     k_h = k.size(-2)
     k_w = k.size(-1)
@@ -361,16 +368,16 @@ def downsampling_2d(
     y = F.conv2d(x, k, padding=0, stride=scale)
     return y
 
+
 def imresize(
         x: torch.Tensor,
-        scale: typing.Optional[float]=None,
-        sizes: typing.Optional[typing.Tuple[int, int]]=None,
-        kernel: typing.Union[str, torch.Tensor]='cubic',
-        sigma: float=2,
-        rotation_degree: float=0,
-        padding_type: str='reflect',
-        antialiasing: bool=True) -> torch.Tensor:
-
+        scale: typing.Optional[float] = None,
+        sizes: typing.Optional[typing.Tuple[int, int]] = None,
+        kernel: typing.Union[str, torch.Tensor] = 'cubic',
+        sigma: float = 2,
+        rotation_degree: float = 0,
+        padding_type: str = 'reflect',
+        antialiasing: bool = True) -> torch.Tensor:
     '''
     Args:
         x (torch.Tensor):
@@ -432,13 +439,14 @@ def imresize(
     x = cast_output(x, dtype)
     return x
 
+
 if __name__ == '__main__':
     # Just for debugging
     torch.set_printoptions(precision=4, sci_mode=False, edgeitems=16, linewidth=200)
     a = torch.arange(64).float().view(1, 1, 8, 8)
     z = imresize(a, 0.5)
     print(z)
-    #a = torch.arange(16).float().view(1, 1, 4, 4)
+    # a = torch.arange(16).float().view(1, 1, 4, 4)
     '''
     a = torch.zeros(1, 1, 4, 4)
     a[..., 0, 0] = 100
@@ -451,15 +459,15 @@ if __name__ == '__main__':
     a[..., -1, -2] = 1
     a[..., -1, 0] = 100
     '''
-    #b = imresize(a, sizes=(3, 8), antialiasing=False)
-    #c = imresize(a, sizes=(11, 13), antialiasing=True)
-    #c = imresize(a, sizes=(4, 4), antialiasing=False, kernel='gaussian', sigma=1)
-    #print(a)
-    #print(b)
-    #print(c)
+    # b = imresize(a, sizes=(3, 8), antialiasing=False)
+    # c = imresize(a, sizes=(11, 13), antialiasing=True)
+    # c = imresize(a, sizes=(4, 4), antialiasing=False, kernel='gaussian', sigma=1)
+    # print(a)
+    # print(b)
+    # print(c)
 
-    #r = discrete_kernel('cubic', 1 / 3)
-    #print(r)
+    # r = discrete_kernel('cubic', 1 / 3)
+    # print(r)
     '''
     a = torch.arange(225).float().view(1, 1, 15, 15)
     imresize(a, sizes=[5, 5])
