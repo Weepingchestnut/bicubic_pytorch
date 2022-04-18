@@ -1,4 +1,4 @@
-'''
+"""
 A standalone PyTorch implementation for fast and efficient bicubic resampling.
 The resulting values are the same to MATLAB function imresize('bicubic').
 
@@ -18,7 +18,7 @@ Example::
 tensor([[[[ 0.7506,  2.1004,  3.4503],
           [ 6.1505,  7.5000,  8.8499],
           [11.5497, 12.8996, 14.2494]]]])
-'''
+"""
 
 import math
 import typing
@@ -73,9 +73,9 @@ def gaussian_contribution(x: torch.Tensor, sigma: float = 2.0) -> torch.Tensor:
 
 def discrete_kernel(
         kernel: str, scale: float, antialiasing: bool = True) -> torch.Tensor:
-    '''
+    """
     For downsampling with integer scale only.
-    '''
+    """
     downsampling_factor = int(1 / scale)
     if kernel == 'cubic':
         kernel_size_orig = 4
@@ -107,7 +107,7 @@ def reflect_padding(
         dim: int,
         pad_pre: int,
         pad_post: int) -> torch.Tensor:
-    '''
+    """
     Apply reflect padding to the given Tensor.
     Note that it is slightly different from the PyTorch functional.pad,
     where boundary elements are used only once.
@@ -117,7 +117,7 @@ def reflect_padding(
     For example,
     [a, b, c, d] would become [b, a, b, c, d, c] with the PyTorch implementation,
     while our implementation yields [a, a, b, c, d, d].
-    '''
+    """
     b, c, h, w = x.size()
     if dim == 2 or dim == -2:
         padding_buffer = x.new_zeros(b, c, h + pad_pre + pad_post, w)
@@ -282,7 +282,7 @@ def resize_1d(
         sigma: float = 2.0,
         padding_type: str = 'reflect',
         antialiasing: bool = True) -> torch.Tensor:
-    '''
+    """
     Args:
         x (torch.Tensor): A torch.Tensor of dimension (B x C, 1, H, W).
         dim (int):
@@ -290,7 +290,7 @@ def resize_1d(
         size (int):
 
     Return:
-    '''
+    """
     # Identity case
     if scale == 1:
         return x
@@ -378,7 +378,7 @@ def imresize(
         rotation_degree: float = 0,
         padding_type: str = 'reflect',
         antialiasing: bool = True) -> torch.Tensor:
-    '''
+    """
     Args:
         x (torch.Tensor):
         scale (float):
@@ -391,7 +391,7 @@ def imresize(
 
     Return:
         torch.Tensor:
-    '''
+    """
 
     if scale is None and sizes is None:
         raise ValueError('One of scale or sizes must be specified!')
@@ -443,9 +443,10 @@ def imresize(
 if __name__ == '__main__':
     # Just for debugging
     torch.set_printoptions(precision=4, sci_mode=False, edgeitems=16, linewidth=200)
-    a = torch.arange(64).float().view(1, 1, 8, 8)
+    a = torch.arange(4*3*24*24).float().view(4, 3, 24, 24)
     z = imresize(a, 0.5)
     print(z)
+    print(z.size())
     # a = torch.arange(16).float().view(1, 1, 4, 4)
     '''
     a = torch.zeros(1, 1, 4, 4)

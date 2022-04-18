@@ -8,15 +8,16 @@ import cv2
 import torch
 from torch.nn import functional as F
 
-def contribution_2d(x: torch.Tensor, kernel: str='cubic') -> torch.Tensor:
-    '''
+
+def contribution_2d(x: torch.Tensor, kernel: str = 'cubic') -> torch.Tensor:
+    """
     Args:
         x (torch.Tensor): (2, k, N), where x[0] is the x-coordinate.
         kernel (str):
 
     Return
         torch.Tensor: (k^2, N)
-    '''
+    """
     if kernel == 'nearest':
         weight = core.nearest_contribution(x)
     elif kernel == 'bilinear':
@@ -31,14 +32,14 @@ def contribution_2d(x: torch.Tensor, kernel: str='cubic') -> torch.Tensor:
     weight = weight / weight.sum(0, keepdim=True)
     return weight
 
+
 def warp_by_size(
         x: torch.Tensor,
         m: torch.Tensor,
         sizes: typing.Tuple[int, int],
-        kernel: str='bicubic',
-        padding_type: str='reflect',
-        fill_value: int=0) -> torch.Tensor:
-
+        kernel: str = 'bicubic',
+        padding_type: str = 'reflect',
+        fill_value: int = 0) -> torch.Tensor:
     kernels = {'nearest': 1, 'bilinear': 2, 'bicubic': 4}
     if kernel in kernels:
         k = kernels[kernel]
@@ -92,14 +93,14 @@ def warp_by_size(
     out = out.view(-1, 1, *sizes)
     return out
 
+
 def warp(
         x: torch.Tensor,
         m: torch.Tensor,
-        sizes: typing.Union[typing.Tuple[int, int], str, None]=None,
-        kernel: str='bicubic',
-        padding_type: str='reflect',
-        fill_value: int=0) -> torch.Tensor:
-
+        sizes: typing.Union[typing.Tuple[int, int], str, None] = None,
+        kernel: str = 'bicubic',
+        padding_type: str = 'reflect',
+        fill_value: int = 0) -> torch.Tensor:
     x, b, c, h, w = core.reshape_input(x)
     x, dtype = core.cast_input(x)
     m = m.to(x.device)
@@ -142,17 +143,18 @@ def warp(
 if __name__ == '__main__':
     import os
     import utils
+
     torch.set_printoptions(precision=4, sci_mode=False, edgeitems=16, linewidth=200)
-    #x = torch.arange(64).float().view(1, 1, 8, 8)
+    # x = torch.arange(64).float().view(1, 1, 8, 8)
     x = torch.arange(16).float().view(1, 1, 4, 4)
-    #x = utils.get_img('example/butterfly.png')
-    #x.requires_grad = True
-    #m = torch.Tensor([[3.2, 0.016, -68], [1.23, 1.7, -54], [0.008, 0.0001, 1]])
-    #m = torch.Tensor([[2.33e-01, 3.97e-3, 3], [-4.49e-1, 2.49e-1, 1.15e2], [-2.95e-3, 1.55e-5, 1]])
+    # x = utils.get_img('example/butterfly.png')
+    # x.requires_grad = True
+    # m = torch.Tensor([[3.2, 0.016, -68], [1.23, 1.7, -54], [0.008, 0.0001, 1]])
+    # m = torch.Tensor([[2.33e-01, 3.97e-3, 3], [-4.49e-1, 2.49e-1, 1.15e2], [-2.95e-3, 1.55e-5, 1]])
     m = torch.Tensor([[2, 0, 0], [0, 2, 0], [0, 0, 1]])
     y = warp(x, m, sizes='auto', kernel='bicubic', fill_value=-1)
     z = core.imresize(x, scale=2, kernel='cubic')
     print(y)
     print(z)
-    #os.makedirs('dummy', exist_ok=True)
-    #utils.save_img(y, 'dummy/warp.png')
+    # os.makedirs('dummy', exist_ok=True)
+    # utils.save_img(y, 'dummy/warp.png')
